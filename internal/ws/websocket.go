@@ -32,7 +32,6 @@ func ServeWs(hub *server.Hub, w http.ResponseWriter, r *http.Request) {
 	go writePump(client)
 }
 
-
 func readPump(hub *server.Hub, c *model.Client) {
 	defer func() {
 		hub.Unregister <- c

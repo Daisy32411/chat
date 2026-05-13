@@ -10,15 +10,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to server
+      - name: Test SSH
         uses: appleboy/ssh-action@v1.0.3
 
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
+          port: 22
+          debug: true
 
           script: |
-            cd /root/chat
-            git pull
-            systemctl restart chat
+            echo "CONNECTED"
+            whoami
+            pwd
+            ls -la

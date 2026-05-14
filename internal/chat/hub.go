@@ -1,20 +1,18 @@
-package server
-
-import "chat/internal/model"
+package chat
 
 type Hub struct {
-	Clients    map[*model.Client]bool
-	Broadcast  chan []byte
-	Register   chan *model.Client
-	Unregister chan *model.Client
+	Clients    map[*Client]bool
+	Broadcast  chan Message
+	Register   chan *Client
+	Unregister chan *Client
 }
 
 func NewHub() *Hub {
 	return &Hub{
-		Clients:    make(map[*model.Client]bool),
-		Broadcast:  make(chan []byte),
-		Register:   make(chan *model.Client),
-		Unregister: make(chan *model.Client),
+		Clients:    make(map[*Client]bool),
+		Broadcast:  make(chan Message),
+		Register:   make(chan *Client),
+		Unregister: make(chan *Client),
 	}
 }
 

@@ -4,13 +4,14 @@ import (
 	"log"
 	"net/http"
 
-	"chat/internal/server"
-	"chat/internal/ws"
+	"chat/internal/chat"
+	ws "chat/internal/transport/websocket"
+
 )
 
 func main() {
 	// создаём hub (центр системы)
-	hub := server.NewHub()
+	hub := chat.NewHub()
 
 	// запускаем его в отдельной горутине
 	go hub.Run()

@@ -1,10 +1,10 @@
 package ws
 
 import (
+	"encoding/json"
 	"net/http"
 
-	"chat/internal/model"
-	"chat/internal/server"
+	"chat/internal/chat"
 
 	"github.com/gorilla/websocket"
 )
@@ -15,15 +15,15 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-func ServeWs(hub *server.Hub, w http.ResponseWriter, r *http.Request) {
+func ServeWs(hub *chat.Hub, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return
 	}
 
-	client := &model.Client{
+	client := &chat.Client{
 		Conn: conn,
-		Send: make(chan []byte, 256),
+		Send: make(chan chat.Message, 256),
 	}
 
 	hub.Register <- client
@@ -32,24 +32,34 @@ func ServeWs(hub *server.Hub, w http.ResponseWriter, r *http.Request) {
 	go writePump(client)
 }
 
-func readPump(hub *server.Hub, c *model.Client) {
+func readPump(hub *chat.Hub, c *chat.Client) {
 	defer func() {
 		hub.Unregister <- c
 		c.Conn.Close()
 	}()
 
 	for {
-		_, msg, err := c.Conn.ReadMessage()
+		_, data, err := c.Conn.ReadMessage()
 		if err != nil {
 			break
 		}
+
+		var msg chat.Message
+		json.Unmarshal(data, &msg)
 
 		hub.Broadcast <- msg
 	}
 }
 
-func writePump(c *model.Client) {
+func writePump(c *chat.Client) {
 	for msg := range c.Send {
-		c.Conn.WriteMessage(1, msg)
+		b, err := json.Marshal(msg)
+		if err != nil {
+			continue
+		}
+
+		if err := c.Conn.WriteMessage(websocket.TextMessage, b); err != nil {
+			return
+		}
 	}
 }

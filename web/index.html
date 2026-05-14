@@ -32,7 +32,10 @@ ws.onmessage = (e) => {
 };
 
 function sendMsg() {
-    ws.send(input.value);
+    ws.send(JSON.stringify({
+        username: "anon",
+        text: input.value
+    }));
     input.value = "";
 }
 </script>

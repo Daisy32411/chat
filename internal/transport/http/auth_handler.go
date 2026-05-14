@@ -49,3 +49,17 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		"token": token,
 	})
 }
+
+func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
+	token := r.Header.Get("Authorization")
+
+	claims, err := auth.ParseToken(token)
+	if err != nil {
+		http.Error(w, "unauthorized", 401)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]string {
+		"username": claims.Username,
+	})
+}

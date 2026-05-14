@@ -1,0 +1,28 @@
+version: '3'
+
+tasks:
+  migrate-up:
+    desc: "Apply all migrations"
+    cmds:
+      - docker exec -i chat-db-1 psql -U chat -d chat < migrations/001_create_users.sql
+
+  migrate-down-users:
+    desc: "Rollback users table"
+    cmds:
+      - docker exec -i chat-db-1 psql -U chat -d chat < migrations/001_create_users.down.sql
+
+  migrate-reset:
+    desc: "Drop all and reapply migrations"
+    cmds:
+      - task: migrate-drop-all
+      - task: migrate-up
+
+  migrate-drop-all:
+    desc: "Drop ALL tables (clean database)"
+    cmds:
+      - docker exec -i chat-db-1 psql -U chat -d chat -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+
+  migrate-status:
+    desc: "Show database tables"
+    cmds:
+      - docker exec -it chat-db-1 psql -U chat -d chat -c "\dt"

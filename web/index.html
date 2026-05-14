@@ -37,14 +37,6 @@
         .hidden {
             display: none;
         }
-
-        .msg {
-            margin: 4px 0;
-        }
-
-        .user {
-            font-weight: bold;
-        }
     </style>
 </head>
 <body>
@@ -75,6 +67,34 @@
 let ws = null;
 let token = localStorage.getItem("token");
 
+// -------------------- INIT --------------------
+
+async function init() {
+    if (!token) {
+        showAuth();
+        return;
+    }
+
+    const res = await fetch("/me", {
+        headers: {
+            "Authorization": token
+        }
+    });
+
+    if (!res.ok) {
+        localStorage.removeItem("token");
+        token = null;
+        showAuth();
+        return;
+    }
+
+    showChat();
+}
+
+init();
+
+// -------------------- UI --------------------
+
 function showChat() {
     document.getElementById("auth").classList.add("hidden");
     document.getElementById("chatBox").classList.remove("hidden");
@@ -85,6 +105,8 @@ function showAuth() {
     document.getElementById("auth").classList.remove("hidden");
     document.getElementById("chatBox").classList.add("hidden");
 }
+
+// -------------------- AUTH --------------------
 
 async function register() {
     const res = await fetch("/register", {
@@ -118,10 +140,15 @@ async function login() {
     token = data.token;
 
     localStorage.setItem("token", token);
+
     showChat();
 }
 
+// -------------------- WS --------------------
+
 function connectWS() {
+    if (ws) return;
+
     ws = new WebSocket("ws://77.223.101.245:8080/ws?token=" + token);
 
     ws.onmessage = (e) => {
@@ -134,18 +161,25 @@ function connectWS() {
     };
 
     ws.onclose = () => {
-        alert("Disconnected");
-        logout();
+        console.log("WS closed");
+        ws = null;
+        // НЕ логаем пользователя — это важно
     };
 }
 
+// -------------------- SEND --------------------
+
 function sendMsg() {
+    if (!ws) return;
+
     ws.send(JSON.stringify({
         text: document.getElementById("msg").value
     }));
 
     document.getElementById("msg").value = "";
 }
+
+// -------------------- LOGOUT --------------------
 
 function logout() {
     localStorage.removeItem("token");
@@ -156,9 +190,6 @@ function logout() {
 
     showAuth();
 }
-
-if (token) showChat();
-else showAuth();
 </script>
 
 </body>

@@ -17,15 +17,20 @@ func main() {
 		log.Fatal(err)
 	}
 
+	chatRepo := chat.NewRepository(database)
+	messagesHandler := httpTransport.NewMessagesHandler(chatRepo)
+
 	repo := auth.NewRepository(database)
 	service := auth.NewService(repo)
 	handler := httpTransport.NewHandler(service)
 
-	hub := chat.NewHub()
+	hub := chat.NewHub(chatRepo)
 	go hub.Run()
 
 	http.HandleFunc("/register", handler.Register)
 	http.HandleFunc("/login", handler.Login)
+
+	http.HandleFunc("/messages", messagesHandler.GetMessages)
 
 	http.HandleFunc("/me", handler.Me)
 

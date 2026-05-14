@@ -2,48 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chat</title>
-    <style>
-        body {
-            font-family: Arial;
-            margin: 20px;
-        }
 
-        #auth, #chatBox {
-            max-width: 500px;
-            margin-bottom: 20px;
-        }
-
-        #chat {
-            border: 1px solid #ccc;
-            height: 300px;
-            overflow-y: scroll;
-            padding: 10px;
-        }
-
-        input {
-            padding: 8px;
-            margin: 5px 0;
-            width: 100%;
-        }
-
-        button {
-            padding: 10px;
-            margin-top: 5px;
-            width: 100%;
-            cursor: pointer;
-        }
-
-        .hidden {
-            display: none;
-        }
-    </style>
+    <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 
-<h2>🔥 Real-time Chat</h2>
+<h2>Real-time Chat</h2>
 
-<!-- AUTH -->
 <div id="auth">
     <input id="username" placeholder="username" />
     <input id="password" type="password" placeholder="password" />
@@ -52,145 +19,17 @@
     <button onclick="login()">Login</button>
 </div>
 
-<!-- CHAT -->
 <div id="chatBox" class="hidden">
 
     <div id="chat"></div>
 
     <input id="msg" placeholder="type message..." />
-    <button onclick="sendMsg()">Send</button>
 
+    <button onclick="sendMsg()">Send</button>
     <button onclick="logout()">Logout</button>
 </div>
 
-<script>
-let ws = null;
-let token = localStorage.getItem("token");
-
-// -------------------- INIT --------------------
-
-async function init() {
-    if (!token) {
-        showAuth();
-        return;
-    }
-
-    const res = await fetch("/me", {
-        headers: {
-            "Authorization": token
-        }
-    });
-
-    if (!res.ok) {
-        localStorage.removeItem("token");
-        token = null;
-        showAuth();
-        return;
-    }
-
-    showChat();
-}
-
-init();
-
-// -------------------- UI --------------------
-
-function showChat() {
-    document.getElementById("auth").classList.add("hidden");
-    document.getElementById("chatBox").classList.remove("hidden");
-    connectWS();
-}
-
-function showAuth() {
-    document.getElementById("auth").classList.remove("hidden");
-    document.getElementById("chatBox").classList.add("hidden");
-}
-
-// -------------------- AUTH --------------------
-
-async function register() {
-    const res = await fetch("/register", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-            username: document.getElementById("username").value,
-            password: document.getElementById("password").value
-        })
-    });
-
-    alert(await res.text());
-}
-
-async function login() {
-    const res = await fetch("/login", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-            username: document.getElementById("username").value,
-            password: document.getElementById("password").value
-        })
-    });
-
-    if (!res.ok) {
-        alert("Invalid login");
-        return;
-    }
-
-    const data = await res.json();
-    token = data.token;
-
-    localStorage.setItem("token", token);
-
-    showChat();
-}
-
-// -------------------- WS --------------------
-
-function connectWS() {
-    if (ws) return;
-
-    ws = new WebSocket("ws://77.223.101.245:8080/ws?token=" + token);
-
-    ws.onmessage = (e) => {
-        const msg = JSON.parse(e.data);
-
-        const div = document.createElement("div");
-        div.innerHTML = `<b>${msg.username}</b>: ${msg.text}`;
-
-        document.getElementById("chat").appendChild(div);
-    };
-
-    ws.onclose = () => {
-        console.log("WS closed");
-        ws = null;
-        // НЕ логаем пользователя — это важно
-    };
-}
-
-// -------------------- SEND --------------------
-
-function sendMsg() {
-    if (!ws) return;
-
-    ws.send(JSON.stringify({
-        text: document.getElementById("msg").value
-    }));
-
-    document.getElementById("msg").value = "";
-}
-
-// -------------------- LOGOUT --------------------
-
-function logout() {
-    localStorage.removeItem("token");
-    token = null;
-
-    if (ws) ws.close();
-    ws = null;
-
-    showAuth();
-}
-</script>
+<script src="/js/app.js"></script>
 
 </body>
 </html>

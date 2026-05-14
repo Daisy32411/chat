@@ -5,14 +5,17 @@ type Hub struct {
 	Broadcast  chan Message
 	Register   chan *Client
 	Unregister chan *Client
+
+	repo	   *Repository
 }
 
-func NewHub() *Hub {
+func NewHub(repo *Repository) *Hub {
 	return &Hub{
 		Clients:    make(map[*Client]bool),
 		Broadcast:  make(chan Message),
 		Register:   make(chan *Client),
 		Unregister: make(chan *Client),
+		repo: 		repo,
 	}
 }
 
@@ -30,6 +33,8 @@ func (h *Hub) Run() {
 			}
 
 		case msg := <-h.Broadcast:
+			_ = h.repo.SaveMessage(msg)
+
 			for c := range h.Clients {
 				select {
 				case c.Send <- msg:

@@ -1,43 +1,164 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <title>Chat</title>
     <style>
-        body { font-family: Arial; margin: 20px; }
-        #chat { border: 1px solid #ccc; height: 300px; overflow-y: scroll; padding: 10px; }
-        input { width: 80%; padding: 10px; }
-        button { padding: 10px; }
+        body {
+            font-family: Arial;
+            margin: 20px;
+        }
+
+        #auth, #chatBox {
+            max-width: 500px;
+            margin-bottom: 20px;
+        }
+
+        #chat {
+            border: 1px solid #ccc;
+            height: 300px;
+            overflow-y: scroll;
+            padding: 10px;
+        }
+
+        input {
+            padding: 8px;
+            margin: 5px 0;
+            width: 100%;
+        }
+
+        button {
+            padding: 10px;
+            margin-top: 5px;
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .msg {
+            margin: 4px 0;
+        }
+
+        .user {
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
 
-<h2>Real-time Chat</h2>
+<h2>🔥 Real-time Chat</h2>
 
-<div id="chat"></div>
+<!-- AUTH -->
+<div id="auth">
+    <input id="username" placeholder="username" />
+    <input id="password" type="password" placeholder="password" />
 
-<input id="msg" placeholder="type message..." />
-<button onclick="sendMsg()">Send</button>
+    <button onclick="register()">Register</button>
+    <button onclick="login()">Login</button>
+</div>
+
+<!-- CHAT -->
+<div id="chatBox" class="hidden">
+
+    <div id="chat"></div>
+
+    <input id="msg" placeholder="type message..." />
+    <button onclick="sendMsg()">Send</button>
+
+    <button onclick="logout()">Logout</button>
+</div>
 
 <script>
-let ws = new WebSocket("ws://77.223.101.245:8080/ws");
+let ws = null;
+let token = localStorage.getItem("token");
 
-let chat = document.getElementById("chat");
-let input = document.getElementById("msg");
+function showChat() {
+    document.getElementById("auth").classList.add("hidden");
+    document.getElementById("chatBox").classList.remove("hidden");
+    connectWS();
+}
 
-ws.onmessage = (e) => {
-    let div = document.createElement("div");
-    div.innerText = e.data;
-    chat.appendChild(div);
-};
+function showAuth() {
+    document.getElementById("auth").classList.remove("hidden");
+    document.getElementById("chatBox").classList.add("hidden");
+}
+
+async function register() {
+    const res = await fetch("/register", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            username: document.getElementById("username").value,
+            password: document.getElementById("password").value
+        })
+    });
+
+    alert(await res.text());
+}
+
+async function login() {
+    const res = await fetch("/login", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            username: document.getElementById("username").value,
+            password: document.getElementById("password").value
+        })
+    });
+
+    if (!res.ok) {
+        alert("Invalid login");
+        return;
+    }
+
+    const data = await res.json();
+    token = data.token;
+
+    localStorage.setItem("token", token);
+    showChat();
+}
+
+function connectWS() {
+    ws = new WebSocket("ws://77.223.101.245:8080/ws?token=" + token);
+
+    ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+
+        const div = document.createElement("div");
+        div.innerHTML = `<b>${msg.username}</b>: ${msg.text}`;
+
+        document.getElementById("chat").appendChild(div);
+    };
+
+    ws.onclose = () => {
+        alert("Disconnected");
+        logout();
+    };
+}
 
 function sendMsg() {
     ws.send(JSON.stringify({
-        username: "anon",
-        text: input.value
+        text: document.getElementById("msg").value
     }));
-    input.value = "";
+
+    document.getElementById("msg").value = "";
 }
+
+function logout() {
+    localStorage.removeItem("token");
+    token = null;
+
+    if (ws) ws.close();
+    ws = null;
+
+    showAuth();
+}
+
+if (token) showChat();
+else showAuth();
 </script>
 
 </body>

@@ -1,7 +1,7 @@
 package chat
 
 type Message struct {
-	Type string `json:"type"`
+	Type     string `json:"type"`
 	Username string `json:"username"`
-	Text string `json:"text"`
+	Text     string `json:"text"`
 }

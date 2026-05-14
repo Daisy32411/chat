@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"chat/internal/auth"
 	"chat/internal/chat"
 
 	"github.com/gorilla/websocket"
@@ -16,12 +17,25 @@ var upgrader = websocket.Upgrader{
 }
 
 func ServeWs(hub *chat.Hub, w http.ResponseWriter, r *http.Request) {
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		http.Error(w, "no token", http.StatusUnauthorized)
+		return
+	}
+
+	claims, err := auth.ParseToken(token)
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return
 	}
 
 	client := &chat.Client{
+		ID:   claims.Username,
 		Conn: conn,
 		Send: make(chan chat.Message, 256),
 	}
@@ -46,6 +60,8 @@ func readPump(hub *chat.Hub, c *chat.Client) {
 
 		var msg chat.Message
 		json.Unmarshal(data, &msg)
+
+		msg.Username = c.ID
 
 		hub.Broadcast <- msg
 	}

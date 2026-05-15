@@ -138,13 +138,16 @@ async function loadDialogs() {
     }
 
     const data = await res.json();
-
     dialogs = Array.isArray(data) ? data : [];
-
     renderDialogs();
 
     if (!currentDialogId && dialogs.length > 0) {
         await openDialog(dialogs[0].id);
+    }
+
+    if (dialogs.length === 0) {
+        document.getElementById("chatHeader").textContent = "Select a dialog";
+        document.getElementById("chat").innerHTML = "";
     }
 }
 

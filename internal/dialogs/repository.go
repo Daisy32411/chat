@@ -64,11 +64,11 @@ func (r *Repository) GetDialogs(username string) ([]Dialog, error) {
 		ORDER BY d.id DESC
 	`, username)
 	if err != nil {
-		return nil, err
+		return []Dialog{}, err
 	}
 	defer rows.Close()
 
-	var result []Dialog
+	result := make([]Dialog, 0)
 
 	for rows.Next() {
 		var d Dialog

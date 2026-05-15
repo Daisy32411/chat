@@ -34,6 +34,10 @@ func (h *DialogHandler) GetDialogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if items == nil {
+		items = []dialogs.Dialog{}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(items)
 }

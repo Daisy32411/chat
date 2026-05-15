@@ -24,16 +24,16 @@ tasks:
   migrate-up:
     desc: Apply migrations
     cmds:
-      - migrate -path ./migrations -database "{{.DB_URL}}" up
+      - migrate -path {{.TASKFILE_DIR}}/migrations -database "{{.DB_URL}}" up
     vars:
-      DB_URL: postgres://postgres:postgres@localhost:5432/chat?sslmode=disable
+      DB_URL: postgres://postgres:postgres@127.0.0.1:5432/chat?sslmode=disable
 
   migrate-down:
     desc: Rollback one migration
     cmds:
-      - migrate -path ./migrations -database "{{.DB_URL}}" down 1
+      - migrate -path {{.TASKFILE_DIR}}/migrations -database "{{.DB_URL}}" down 1
     vars:
-      DB_URL: postgres://postgres:postgres@localhost:5432/chat?sslmode=disable
+      DB_URL: postgres://postgres:postgres@127.0.0.1:5432/chat?sslmode=disable
 
   docker-up:
     desc: Start PostgreSQL

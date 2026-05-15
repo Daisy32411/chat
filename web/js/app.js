@@ -112,6 +112,7 @@ function sendMsg() {
     const input = document.getElementById("msg");
 
     ws.send(JSON.stringify({
+        dialog_id: 1,
         text: input.value
     }));
 
@@ -133,7 +134,7 @@ function logout() {
 }
 
 async function loadMessages() {
-    const res = await fetch("/messages");
+    const res = await fetch("/messages?dialog_id=1");
 
     const messages = await res.json();
 

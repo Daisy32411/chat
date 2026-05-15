@@ -7,12 +7,16 @@ tasks:
     cmds:
       - docker exec -i chat-db-1 psql -U chat -d chat < migrations/001_users.up.sql
       - docker exec -i chat-db-1 psql -U chat -d chat < migrations/002_create_messages.up.sql
+      - docker exec -i chat-db-1 psql -U chat -d chat < migrations/003_create_dialogs.up.sql
+      - docker exec -i chat-db-1 psql -U chat -d chat < migrations/004_alter_messages.up.sql
 
   migrate-down:
     desc: Rollback all migrations
     cmds:
       - docker exec -i chat-db-1 psql -U chat -d chat < migrations/002_create_messages.down.sql
       - docker exec -i chat-db-1 psql -U chat -d chat < migrations/001_users.down.sql
+      - docker exec -i chat-db-1 psql -U chat -d chat < migrations/003_create_dialogs.down.sql
+      - docker exec -i chat-db-1 psql -U chat -d chat < migrations/004_alter_messages.down.sql
 
   migrate-drop-all:
     desc: Drop ALL tables

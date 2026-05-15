@@ -14,7 +14,12 @@ func NewRepository(db *sql.DB) *Repository {
 
 func (r *Repository) SaveMessage(msg Message) error {
 	_, err := r.db.Exec(
-		"INSERT INTO messages(username, text) VALUES($1, $2)",
+		`INSERT INTO messages(
+			dialog_id,
+			username, 
+			text
+		) VALUES($1, $2, $1)`,
+		msg.DialogID,
 		msg.Username,
 		msg.Text,
 	)
@@ -22,13 +27,19 @@ func (r *Repository) SaveMessage(msg Message) error {
 	return err
 }
 
-func (r *Repository) GetMessage() ([]Message, error) {
+func (r *Repository) GetMessage(dialogID int) ([]Message, error) {
 	rows, err := r.db.Query(`
-		SELECT username, text
-		FROM messages
+		SELECT 
+			id,
+			dialog_id,
+			username, 
+			text
+		FROM 
+			messages
+		WHERE dialog_id=$1
 		ORDER BY id ASC
 		LIMIT 100
-	`)
+	`, dialogID)
 	if err != nil {
 		return nil, err
 	}
@@ -41,6 +52,8 @@ func (r *Repository) GetMessage() ([]Message, error) {
 		var msg Message
 
 		err := rows.Scan(
+			&msg.ID,
+			&msg.DialogID,
 			&msg.Username,
 			&msg.Text,
 		)

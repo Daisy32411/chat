@@ -1,0 +1,2 @@
+DELETE TABLE IF EXISTS dialog_members;
+DELETE TABLE IF EXISTS dialogs;

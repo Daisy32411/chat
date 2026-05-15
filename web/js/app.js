@@ -132,19 +132,19 @@ async function loadDialogs() {
     });
 
     if (!res.ok) {
+        dialogs = [];
+        renderDialogs();
         return;
     }
 
-    dialogs = await res.json();
+    const data = await res.json();
+
+    dialogs = Array.isArray(data) ? data : [];
+
     renderDialogs();
 
     if (!currentDialogId && dialogs.length > 0) {
         await openDialog(dialogs[0].id);
-    }
-
-    if (dialogs.length === 0) {
-        byId("chatHeader").textContent = "Select a dialog";
-        byId("chat").innerHTML = "";
     }
 }
 

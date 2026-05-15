@@ -80,11 +80,6 @@ func (s *Server) ServeWs(w http.ResponseWriter, r *http.Request) {
 
 	s.hub.Register <- client
 
-	msgs, _ := s.repo.GetMessages(dialogID)
-	for _, m := range msgs {
-		client.Send <- m
-	}
-
 	go s.readPump(client)
 	go s.writePump(client)
 }

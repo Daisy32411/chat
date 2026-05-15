@@ -59,9 +59,7 @@ async function register() {
 async function login() {
     const res = await fetch("/login", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             username: document.getElementById("username").value,
             password: document.getElementById("password").value
@@ -69,28 +67,16 @@ async function login() {
     });
 
     if (!res.ok) {
-        alert("Invalid login");
+        alert(await res.text());
         return;
     }
 
     const data = await res.json();
+
     token = data.token;
     localStorage.setItem("token", token);
 
-    const meRes = await fetch("/me", {
-        headers: {
-            "Authorization": token
-        }
-    });
-
-    if (meRes.ok) {
-        const meData = await meRes.json();
-        me = meData.username;
-        document.getElementById("me").textContent = `@${me}`;
-    }
-
     showChat();
-    await loadDialogs();
 }
 
 async function loadDialogs() {

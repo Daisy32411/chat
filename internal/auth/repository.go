@@ -15,7 +15,6 @@ func (r *Repository) Create(username, password string) error {
 		"INSERT INTO users(username, password) VALUES($1, $2)",
 		username, password,
 	)
-	
 	return err
 }
 
@@ -36,5 +35,5 @@ func (r *Repository) GetByUsername(username string) (*User, error) {
 		return nil, err
 	}
 
-	return u, err
+	return u, nil
 }

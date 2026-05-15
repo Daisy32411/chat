@@ -1,2 +1,0 @@
-ALTER TABLE messages
-ADD COLUMN dialog_id INT REFERENCES dialogs(id) ON DELETE CASCADE;

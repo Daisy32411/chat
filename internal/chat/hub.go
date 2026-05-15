@@ -5,24 +5,20 @@ type Hub struct {
 	Broadcast  chan Message
 	Register   chan *Client
 	Unregister chan *Client
-
-	repo	   *Repository
 }
 
-func NewHub(repo *Repository) *Hub {
+func NewHub() *Hub {
 	return &Hub{
 		Clients:    make(map[*Client]bool),
 		Broadcast:  make(chan Message),
 		Register:   make(chan *Client),
 		Unregister: make(chan *Client),
-		repo: 		repo,
 	}
 }
 
 func (h *Hub) Run() {
 	for {
 		select {
-
 		case client := <-h.Register:
 			h.Clients[client] = true
 
@@ -33,9 +29,11 @@ func (h *Hub) Run() {
 			}
 
 		case msg := <-h.Broadcast:
-			_ = h.repo.SaveMessage(msg)
-
 			for c := range h.Clients {
+				if c.DialogID != msg.DialogID {
+					continue
+				}
+
 				select {
 				case c.Send <- msg:
 				default:

@@ -1,25 +1,22 @@
 version: '3'
 
 tasks:
-
   migrate-up:
     desc: Apply all migrations
     cmds:
-      - docker exec -i chat-db-1 psql -U chat -d chat < migrations/001_users.up.sql
-      - docker exec -i chat-db-1 psql -U chat -d chat < migrations/002_create_messages.up.sql
-      - docker exec -i chat-db-1 psql -U chat -d chat < migrations/003_create_dialogs.up.sql
-      - docker exec -i chat-db-1 psql -U chat -d chat < migrations/004_alter_messages.up.sql
+      - docker exec -i chat-db-1 psql -U chat -d chat < migrations/001_create_users.up.sql
+      - docker exec -i chat-db-1 psql -U chat -d chat < migrations/002_create_dialogs.up.sql
+      - docker exec -i chat-db-1 psql -U chat -d chat < migrations/003_create_messages.up.sql
 
   migrate-down:
     desc: Rollback all migrations
     cmds:
-      - docker exec -i chat-db-1 psql -U chat -d chat < migrations/002_create_messages.down.sql
-      - docker exec -i chat-db-1 psql -U chat -d chat < migrations/001_users.down.sql
-      - docker exec -i chat-db-1 psql -U chat -d chat < migrations/003_create_dialogs.down.sql
-      - docker exec -i chat-db-1 psql -U chat -d chat < migrations/004_alter_messages.down.sql
+      - docker exec -i chat-db-1 psql -U chat -d chat < migrations/003_create_messages.down.sql
+      - docker exec -i chat-db-1 psql -U chat -d chat < migrations/002_create_dialogs.down.sql
+      - docker exec -i chat-db-1 psql -U chat -d chat < migrations/001_create_users.down.sql
 
   migrate-drop-all:
-    desc: Drop ALL tables
+    desc: Drop all tables
     cmds:
       - docker exec -i chat-db-1 psql -U chat -d chat -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 
@@ -32,4 +29,4 @@ tasks:
   migrate-status:
     desc: Show tables
     cmds:
-      - docker exec -i chat-db-1 psql -U chat -d chat -c "\\dt"
+      - docker exec -i chat-db-1 psql -U chat -d chat -c "\dt"

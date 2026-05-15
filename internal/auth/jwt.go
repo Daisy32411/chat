@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -32,5 +33,10 @@ func ParseToken(tokenStr string) (*Claims, error) {
 		return nil, err
 	}
 
-	return t.Claims.(*Claims), nil
+	claims, ok := t.Claims.(*Claims)
+	if !ok || !t.Valid {
+		return nil, errors.New("invalid token")
+	}
+
+	return claims, nil
 }

@@ -4,11 +4,14 @@ import (
 	"log"
 	"net/http"
 
-	"chat/internal/db"
 	"chat/internal/auth"
+	"chat/internal/chat"
+	"chat/internal/db"
+	"chat/internal/dialogs"
+	"chat/internal/middleware"
+	"chat/internal/users"
 	httpTransport "chat/internal/transport/http"
 	ws "chat/internal/transport/websocket"
-	"chat/internal/chat"
 )
 
 func main() {
@@ -17,26 +20,36 @@ func main() {
 		log.Fatal(err)
 	}
 
+	authRepo := auth.NewRepository(database)
+	authService := auth.NewService(authRepo)
+	authHandler := httpTransport.NewHandler(authService)
+
+	dialogRepo := dialogs.NewRepository(database)
+	dialogService := dialogs.NewService(dialogRepo)
+	dialogHandler := httpTransport.NewDialogHandler(dialogService)
+
 	chatRepo := chat.NewRepository(database)
-	messagesHandler := httpTransport.NewMessagesHandler(chatRepo)
+	messagesHandler := httpTransport.NewMessagesHandler(chatRepo, dialogRepo)
 
-	repo := auth.NewRepository(database)
-	service := auth.NewService(repo)
-	handler := httpTransport.NewHandler(service)
+	usersRepo := users.NewRepository(database)
+	usersHandler := httpTransport.NewUsersHandler(usersRepo)
 
-	hub := chat.NewHub(chatRepo)
+	hub := chat.NewHub()
 	go hub.Run()
 
-	http.HandleFunc("/register", handler.Register)
-	http.HandleFunc("/login", handler.Login)
+	wsServer := ws.NewServer(hub, chatRepo, dialogRepo)
 
-	http.HandleFunc("/messages", messagesHandler.GetMessages)
+	http.HandleFunc("/register", authHandler.Register)
+	http.HandleFunc("/login", authHandler.Login)
+	http.HandleFunc("/me", authHandler.Me)
 
-	http.HandleFunc("/me", handler.Me)
+	http.HandleFunc("/dialogs", middleware.AuthMiddleware(dialogHandler.GetDialogs))
+	http.HandleFunc("/dialogs/create", middleware.AuthMiddleware(dialogHandler.CreateDialog))
 
-	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		ws.ServeWs(hub, w, r)
-	})
+	http.HandleFunc("/messages", middleware.AuthMiddleware(messagesHandler.GetMessages))
+	http.HandleFunc("/users/search", middleware.AuthMiddleware(usersHandler.SearchUsers))
+
+	http.HandleFunc("/ws", wsServer.ServeWs)
 
 	http.Handle("/", http.FileServer(http.Dir("./web")))
 

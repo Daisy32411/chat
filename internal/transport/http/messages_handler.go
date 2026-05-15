@@ -11,13 +11,13 @@ import (
 )
 
 type MessagesHandler struct {
-	repo      *chat.Repository
+	repo       *chat.Repository
 	dialogRepo *dialogs.Repository
 }
 
 func NewMessagesHandler(repo *chat.Repository, dialogRepo *dialogs.Repository) *MessagesHandler {
 	return &MessagesHandler{
-		repo:      repo,
+		repo:       repo,
 		dialogRepo: dialogRepo,
 	}
 }
@@ -56,6 +56,10 @@ func (h *MessagesHandler) GetMessages(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "server error", http.StatusInternalServerError)
 		return
+	}
+
+	if msgs == nil {
+		msgs = []chat.Message{}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

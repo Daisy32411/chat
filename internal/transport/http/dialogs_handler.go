@@ -66,7 +66,7 @@ func (h *DialogHandler) CreateDialog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := h.service.Create(username, target)
+	id, err := h.service.GetOrCreate(username, target)
 	if err != nil {
 		http.Error(w, "server error", http.StatusInternalServerError)
 		return

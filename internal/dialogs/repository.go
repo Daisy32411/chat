@@ -16,13 +16,30 @@ type Dialog struct {
 	LastMessage string `json:"last_message"`
 }
 
-func (r *Repository) CreateDialog(user1, user2 string) (int, error) {
-	var dialogID int
+func (r *Repository) GetOrCreateDialog(user1, user2 string) (int, error) {
+	var id int
 
 	err := r.db.QueryRow(`
+		SELECT d.id
+		FROM dialogs d
+		JOIN dialog_members dm1 ON dm1.dialog_id = d.id
+		JOIN dialog_members dm2 ON dm2.dialog_id = d.id
+		WHERE dm1.username = $1 AND dm2.username = $2
+		LIMIT 1
+	`, user1, user2).Scan(&id)
+
+	if err == nil {
+		return id, nil
+	}
+
+	if err != sql.ErrNoRows {
+		return 0, err
+	}
+
+	err = r.db.QueryRow(`
 		INSERT INTO dialogs DEFAULT VALUES
 		RETURNING id
-	`).Scan(&dialogID)
+	`).Scan(&id)
 	if err != nil {
 		return 0, err
 	}
@@ -30,9 +47,12 @@ func (r *Repository) CreateDialog(user1, user2 string) (int, error) {
 	_, err = r.db.Exec(`
 		INSERT INTO dialog_members(dialog_id, username)
 		VALUES ($1, $2), ($1, $3)
-	`, dialogID, user1, user2)
+	`, id, user1, user2)
+	if err != nil {
+		return 0, err
+	}
 
-	return dialogID, err
+	return id, nil
 }
 
 func (r *Repository) GetDialogs(username string) ([]Dialog, error) {
@@ -64,7 +84,7 @@ func (r *Repository) GetDialogs(username string) ([]Dialog, error) {
 		ORDER BY d.id DESC
 	`, username)
 	if err != nil {
-		return []Dialog{}, err
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -93,26 +113,4 @@ func (r *Repository) IsMember(dialogID int, username string) (bool, error) {
 	`, dialogID, username).Scan(&exists)
 
 	return exists, err
-}
-
-func (r *Repository) GetOrCreateDialog(user1, user2 string) (int, error) {
-	var id int
-
-	err := r.db.QueryRow(`
-		SELECT dm1.dialog_id
-		FROM dialog_members dm1
-		JOIN dialog_members dm2 ON dm1.dialog_id = dm2.dialog_id
-		WHERE dm1.username = $1 AND dm2.username = $2
-		LIMIT 1
-	`, user1, user2).Scan(&id)
-
-	if err == sql.ErrNoRows {
-		return r.CreateDialog(user1, user2)
-	}
-
-	if err != nil {
-		return 0, err
-	}
-
-	return id, nil
 }

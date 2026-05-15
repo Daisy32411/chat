@@ -3,9 +3,9 @@ package http
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
 
 	"chat/internal/auth"
+	"chat/internal/middleware"
 )
 
 type Handler struct {
@@ -44,7 +44,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.auth.Login(body.Username, body.Password); err != nil {
-		http.Error(w, "invalid", http.StatusUnauthorized)
+		http.Error(w, "invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
@@ -61,17 +61,14 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
-	token := strings.TrimSpace(r.Header.Get("Authorization"))
-	token = strings.TrimPrefix(token, "Bearer ")
-
-	claims, err := auth.ParseToken(token)
-	if err != nil {
+	username, ok := middleware.UserFromContext(r.Context())
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
-		"username": claims.Username,
+		"username": username,
 	})
 }

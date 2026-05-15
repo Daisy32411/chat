@@ -41,7 +41,7 @@ func main() {
 
 	http.HandleFunc("/register", authHandler.Register)
 	http.HandleFunc("/login", authHandler.Login)
-	http.HandleFunc("/me", authHandler.Me)
+	http.HandleFunc("/me", middleware.AuthMiddleware(authHandler.Me))
 
 	http.HandleFunc("/dialogs", middleware.AuthMiddleware(dialogHandler.GetDialogs))
 	http.HandleFunc("/dialogs/create", middleware.AuthMiddleware(dialogHandler.CreateDialog))

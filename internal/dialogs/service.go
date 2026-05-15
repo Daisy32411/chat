@@ -8,8 +8,8 @@ func NewService(repo *Repository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s *Service) Create(user1, user2 string) (int, error) {
-	return s.repo.CreateDialog(user1, user2)
+func (s *Service) GetOrCreate(user1, user2 string) (int, error) {
+	return s.repo.GetOrCreateDialog(user1, user2)
 }
 
 func (s *Service) Get(user string) ([]Dialog, error) {

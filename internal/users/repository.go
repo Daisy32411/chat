@@ -23,7 +23,7 @@ func (r *Repository) Search(query, currentUser string) ([]string, error) {
 	}
 	defer rows.Close()
 
-	var result []string
+	result := make([]string, 0)
 
 	for rows.Next() {
 		var username string

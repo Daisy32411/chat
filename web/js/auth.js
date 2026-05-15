@@ -1,9 +1,24 @@
 const byId = (id) => document.getElementById(id);
 
-document.addEventListener("DOMContentLoaded", () => {
-    byId("registerBtn").addEventListener("click", register);
-    byId("loginBtn").addEventListener("click", login);
-});
+async function checkExistingSession() {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+        const res = await fetch("/me", {
+            headers: { "Authorization": token }
+        });
+
+        if (res.ok) {
+            window.location.href = "/chat.html";
+            return;
+        }
+
+        localStorage.removeItem("token");
+    } catch (_) {
+        localStorage.removeItem("token");
+    }
+}
 
 function setStatus(text) {
     const el = byId("status");
@@ -55,6 +70,11 @@ async function login() {
 
     const data = await res.json();
     localStorage.setItem("token", data.token);
-
     window.location.href = "/chat.html";
 }
+
+document.addEventListener("DOMContentLoaded", async () => {
+    await checkExistingSession();
+    byId("registerBtn").addEventListener("click", register);
+    byId("loginBtn").addEventListener("click", login);
+});

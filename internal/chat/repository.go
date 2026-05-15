@@ -32,15 +32,15 @@ func (r *Repository) GetMessages(dialogID int) ([]Message, error) {
 	}
 	defer rows.Close()
 
-	var messages []Message
+	result := make([]Message, 0)
 
 	for rows.Next() {
 		var msg Message
 		if err := rows.Scan(&msg.ID, &msg.DialogID, &msg.Username, &msg.Text); err != nil {
 			continue
 		}
-		messages = append(messages, msg)
+		result = append(result, msg)
 	}
 
-	return messages, nil
+	return result, nil
 }

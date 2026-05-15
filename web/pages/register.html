@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Register</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="auth-page">
+  <div class="card">
+    <h1>Create account</h1>
+    <p class="muted">Make a new profile.</p>
+    <form id="register-form">
+      <label>Username</label>
+      <input name="username" type="text" autocomplete="username" required>
+      <label>Email</label>
+      <input name="email" type="email" autocomplete="email" required>
+      <label>Password</label>
+      <input name="password" type="password" autocomplete="new-password" minlength="6" required>
+      <button type="submit">Register</button>
+    </form>
+    <p class="muted">Already have an account? <a href="/login">Log in</a></p>
+    <p id="auth-error" class="error"></p>
+  </div>
+  <script src="/static/js/auth.js"></script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Чат - Личный кабинет</title>
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <script src="/static/js/dashboard.js" defer></script>
+</head>
+<body data-username="{{.}}">
+<div class="sidebar">
+    <div class="sidebar-header">
+        <h2>Добро пожаловать, {{.}}!</h2>
+        <p>Ваши диалоги</p>
+    </div>
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Поиск пользователей...">
+        <div id="searchResults" class="search-results" style="display:none;"></div>
+    </div>
+    <div class="dialogs-list" id="dialogsList"></div>
+    <div class="logout-btn">
+        <a href="/logout">Выйти</a>
+    </div>
+</div>
+<div class="chat-area">
+    <div class="chat-header" id="chatHeader">Выберите диалог</div>
+    <div class="messages-container" id="messagesContainer"></div>
+    <div class="input-area" id="inputArea" style="display: none;">
+        <input type="text" id="messageInput" placeholder="Введите сообщение...">
+        <button id="sendBtn">Отправить</button>
+    </div>
+</div>
+</body>
+</html>

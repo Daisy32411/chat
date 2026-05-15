@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Регистрация</title>
+    <link rel="stylesheet" href="/static/css/register.css">
+</head>
+<body>
+<div class="container">
+    <h2>Регистрация</h2>
+    {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+    <form method="post">
+        <input type="text" name="username" placeholder="Имя пользователя" required>
+        <input type="password" name="password" placeholder="Пароль" required>
+        <button type="submit">Создать аккаунт</button>
+    </form>
+    <div class="link">Уже есть аккаунт? <a href="/login">Войти</a></div>
+</div>
+</body>
+</html>

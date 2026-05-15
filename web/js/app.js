@@ -1,40 +1,16 @@
+console.log("app.js loaded");
+
 let ws = null;
 let token = localStorage.getItem("token");
 let me = "";
 let currentDialogId = null;
 let dialogs = [];
 
-function byId(id) {
-    return document.getElementById(id);
-}
+const byId = (id) => document.getElementById(id);
 
-async function init() {
-    bindUI();
-
-    if (!token) {
-        showAuth();
-        return;
-    }
-
-    const res = await fetch("/me", {
-        headers: {
-            "Authorization": token
-        }
-    });
-
-    if (!res.ok) {
-        localStorage.removeItem("token");
-        token = null;
-        showAuth();
-        return;
-    }
-
-    const data = await res.json();
-    me = data.username;
-    byId("me").textContent = `@${me}`;
-
-    showChat();
-    await loadDialogs();
+function setStatus(text) {
+    const el = byId("status");
+    if (el) el.textContent = text;
 }
 
 function bindUI() {
@@ -45,21 +21,47 @@ function bindUI() {
     byId("searchBtn").addEventListener("click", searchUsers);
 
     byId("msg").addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-            sendMsg();
-        }
+        if (e.key === "Enter") sendMsg();
     });
 
     byId("searchInput").addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-            searchUsers();
-        }
+        if (e.key === "Enter") searchUsers();
     });
 }
 
-function showChat() {
-    byId("auth").classList.add("hidden");
-    byId("chatBox").classList.remove("hidden");
+async function init() {
+    bindUI();
+
+    if (!token) {
+        showAuth();
+        setStatus("");
+        return;
+    }
+
+    try {
+        const res = await fetch("/me", {
+            headers: { "Authorization": token }
+        });
+
+        if (!res.ok) {
+            localStorage.removeItem("token");
+            token = null;
+            showAuth();
+            setStatus("");
+            return;
+        }
+
+        const data = await res.json();
+        me = data.username;
+        byId("me").textContent = `@${me}`;
+
+        showChat();
+        await loadDialogs();
+    } catch (err) {
+        console.error(err);
+        setStatus("Network error");
+        showAuth();
+    }
 }
 
 function showAuth() {
@@ -67,87 +69,115 @@ function showAuth() {
     byId("chatBox").classList.add("hidden");
 }
 
+function showChat() {
+    byId("auth").classList.add("hidden");
+    byId("chatBox").classList.remove("hidden");
+}
+
 async function register() {
-    const res = await fetch("/register", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            username: byId("username").value,
-            password: byId("password").value
-        })
-    });
+    console.log("register click");
+    setStatus("Registering...");
 
-    const text = await res.text();
+    try {
+        const res = await fetch("/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                username: byId("username").value,
+                password: byId("password").value
+            })
+        });
 
-    if (!res.ok) {
-        alert(text);
-        return;
+        const text = await res.text();
+
+        if (!res.ok) {
+            setStatus(text || "Register failed");
+            alert(text || "Register failed");
+            return;
+        }
+
+        setStatus("Registered");
+        alert(text || "registered");
+    } catch (err) {
+        console.error(err);
+        setStatus("Register network error");
+        alert("Register network error");
     }
-
-    alert(text || "registered");
 }
 
 async function login() {
-    const res = await fetch("/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            username: byId("username").value,
-            password: byId("password").value
-        })
-    });
+    console.log("login click");
+    setStatus("Logging in...");
 
-    if (!res.ok) {
-        alert(await res.text());
-        return;
-    }
+    try {
+        const res = await fetch("/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                username: byId("username").value,
+                password: byId("password").value
+            })
+        });
 
-    const data = await res.json();
-    token = data.token;
-    localStorage.setItem("token", token);
-
-    const meRes = await fetch("/me", {
-        headers: {
-            "Authorization": token
+        if (!res.ok) {
+            const text = await res.text();
+            setStatus(text || "Invalid login");
+            alert(text || "Invalid login");
+            return;
         }
-    });
 
-    if (meRes.ok) {
-        const meData = await meRes.json();
-        me = meData.username;
-        byId("me").textContent = `@${me}`;
+        const data = await res.json();
+        token = data.token;
+        localStorage.setItem("token", token);
+
+        const meRes = await fetch("/me", {
+            headers: { "Authorization": token }
+        });
+
+        if (meRes.ok) {
+            const meData = await meRes.json();
+            me = meData.username;
+            byId("me").textContent = `@${me}`;
+        }
+
+        showChat();
+        await loadDialogs();
+        setStatus("");
+    } catch (err) {
+        console.error(err);
+        setStatus("Login network error");
+        alert("Login network error");
     }
-
-    showChat();
-    await loadDialogs();
 }
 
 async function loadDialogs() {
-    const res = await fetch("/dialogs", {
-        headers: {
-            "Authorization": token
-        }
-    });
+    try {
+        const res = await fetch("/dialogs", {
+            headers: { "Authorization": token }
+        });
 
-    if (!res.ok) {
+        if (!res.ok) {
+            dialogs = [];
+            renderDialogs();
+            return;
+        }
+
+        const data = await res.json();
+        dialogs = Array.isArray(data) ? data : [];
+        renderDialogs();
+
+        if (!currentDialogId && dialogs.length > 0) {
+            await openDialog(dialogs[0].id);
+        }
+
+        if (dialogs.length === 0) {
+            byId("chatHeader").textContent = "Select a dialog";
+            byId("chat").innerHTML = "";
+        }
+    } catch (err) {
+        console.error(err);
         dialogs = [];
         renderDialogs();
-        return;
-    }
-
-    const data = await res.json();
-    dialogs = Array.isArray(data) ? data : [];
-    renderDialogs();
-
-    if (!currentDialogId && dialogs.length > 0) {
-        await openDialog(dialogs[0].id);
-    }
-
-    if (dialogs.length === 0) {
-        document.getElementById("chatHeader").textContent = "Select a dialog";
-        document.getElementById("chat").innerHTML = "";
     }
 }
 
@@ -176,7 +206,6 @@ function renderDialogs() {
 
 function closeWS() {
     if (!ws) return;
-
     const socket = ws;
     ws = null;
     socket.close();
@@ -195,25 +224,27 @@ async function openDialog(id) {
 }
 
 async function loadMessages(dialogId) {
-    const res = await fetch(`/messages?dialog_id=${dialogId}`, {
-        headers: {
-            "Authorization": token
+    try {
+        const res = await fetch(`/messages?dialog_id=${dialogId}`, {
+            headers: { "Authorization": token }
+        });
+
+        if (!res.ok) {
+            return;
         }
-    });
 
-    if (!res.ok) {
-        return;
+        const messages = await res.json();
+        const chat = byId("chat");
+        chat.innerHTML = "";
+
+        for (const msg of messages) {
+            addMessage(msg);
+        }
+
+        chat.scrollTop = chat.scrollHeight;
+    } catch (err) {
+        console.error(err);
     }
-
-    const messages = await res.json();
-    const chat = byId("chat");
-    chat.innerHTML = "";
-
-    for (const msg of messages) {
-        addMessage(msg);
-    }
-
-    chat.scrollTop = chat.scrollHeight;
 }
 
 function connectWS(dialogId) {
@@ -226,18 +257,12 @@ function connectWS(dialogId) {
 
     socket.onmessage = (e) => {
         const msg = JSON.parse(e.data);
-
-        if (msg.dialog_id !== currentDialogId) {
-            return;
-        }
-
+        if (msg.dialog_id !== currentDialogId) return;
         addMessage(msg);
     };
 
     socket.onclose = () => {
-        if (ws === socket) {
-            ws = null;
-        }
+        if (ws === socket) ws = null;
     };
 }
 
@@ -265,13 +290,9 @@ function sendMsg() {
 
     const input = byId("msg");
     const text = input.value.trim();
-
     if (!text) return;
 
-    ws.send(JSON.stringify({
-        text: text
-    }));
-
+    ws.send(JSON.stringify({ text }));
     input.value = "";
 }
 
@@ -284,52 +305,56 @@ async function searchUsers() {
         return;
     }
 
-    const res = await fetch(`/users/search?q=${encodeURIComponent(q)}`, {
-        headers: {
-            "Authorization": token
+    try {
+        const res = await fetch(`/users/search?q=${encodeURIComponent(q)}`, {
+            headers: { "Authorization": token }
+        });
+
+        if (!res.ok) {
+            results.innerHTML = "";
+            return;
         }
-    });
 
-    if (!res.ok) {
-        alert(await res.text());
-        return;
-    }
+        const users = await res.json();
+        results.innerHTML = "";
 
-    const users = await res.json();
-    results.innerHTML = "";
-
-    for (const username of users) {
-        const item = document.createElement("div");
-        item.className = "user-item";
-        item.textContent = username;
-        item.onclick = () => createDialog(username);
-        results.appendChild(item);
+        for (const username of users) {
+            const item = document.createElement("div");
+            item.className = "user-item";
+            item.textContent = username;
+            item.onclick = () => createDialog(username);
+            results.appendChild(item);
+        }
+    } catch (err) {
+        console.error(err);
     }
 }
 
 async function createDialog(username) {
-    const res = await fetch("/dialogs/create", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": token
-        },
-        body: JSON.stringify({
-            username: username
-        })
-    });
+    try {
+        const res = await fetch("/dialogs/create", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": token
+            },
+            body: JSON.stringify({ username })
+        });
 
-    if (!res.ok) {
-        alert(await res.text());
-        return;
+        if (!res.ok) {
+            alert(await res.text());
+            return;
+        }
+
+        const data = await res.json();
+        byId("searchInput").value = "";
+        byId("searchResults").innerHTML = "";
+
+        await loadDialogs();
+        await openDialog(data.dialog_id);
+    } catch (err) {
+        console.error(err);
     }
-
-    const data = await res.json();
-    byId("searchInput").value = "";
-    byId("searchResults").innerHTML = "";
-
-    await loadDialogs();
-    await openDialog(data.dialog_id);
 }
 
 function logout() {
@@ -340,11 +365,13 @@ function logout() {
 
     closeWS();
     showAuth();
+
     byId("me").textContent = "";
     byId("dialogs").innerHTML = "";
     byId("searchResults").innerHTML = "";
     byId("chat").innerHTML = "";
     byId("chatHeader").textContent = "Select a dialog";
+    setStatus("");
 }
 
 init();

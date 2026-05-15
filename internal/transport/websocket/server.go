@@ -3,7 +3,6 @@ package ws
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"chat/internal/auth"
@@ -36,16 +35,11 @@ func NewServer(hub *chat.Hub, repo *chat.Repository, dialogRepo *dialogs.Reposit
 func (s *Server) ServeWs(w http.ResponseWriter, r *http.Request) {
 	token := strings.TrimSpace(r.URL.Query().Get("token"))
 	token = strings.TrimPrefix(token, "Bearer ")
-	dialogIDStr := r.URL.Query().Get("dialog_id")
 
-	if token == "" || dialogIDStr == "" {
+	peer := strings.TrimSpace(r.URL.Query().Get("peer"))
+
+	if token == "" || peer == "" {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	dialogID, err := strconv.Atoi(dialogIDStr)
-	if err != nil {
-		http.Error(w, "invalid dialog_id", http.StatusBadRequest)
 		return
 	}
 
@@ -55,14 +49,9 @@ func (s *Server) ServeWs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	member, err := s.dialogRepo.IsMember(dialogID, claims.Username)
+	dialogID, err := s.dialogRepo.GetOrCreateDialog(claims.Username, peer)
 	if err != nil {
 		http.Error(w, "server error", http.StatusInternalServerError)
-		return
-	}
-
-	if !member {
-		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
 

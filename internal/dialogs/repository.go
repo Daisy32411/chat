@@ -94,3 +94,25 @@ func (r *Repository) IsMember(dialogID int, username string) (bool, error) {
 
 	return exists, err
 }
+
+func (r *Repository) GetOrCreateDialog(user1, user2 string) (int, error) {
+	var id int
+
+	err := r.db.QueryRow(`
+		SELECT dm1.dialog_id
+		FROM dialog_members dm1
+		JOIN dialog_members dm2 ON dm1.dialog_id = dm2.dialog_id
+		WHERE dm1.username = $1 AND dm2.username = $2
+		LIMIT 1
+	`, user1, user2).Scan(&id)
+
+	if err == sql.ErrNoRows {
+		return r.CreateDialog(user1, user2)
+	}
+
+	if err != nil {
+		return 0, err
+	}
+
+	return id, nil
+}

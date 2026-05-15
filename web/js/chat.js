@@ -13,6 +13,7 @@ function ensureToken() {
         window.location.href = "/";
         return false;
     }
+
     return true;
 }
 
@@ -22,11 +23,15 @@ function bindUI() {
     byId("searchBtn").addEventListener("click", searchUsers);
 
     byId("msg").addEventListener("keydown", (e) => {
-        if (e.key === "Enter") sendMsg();
+        if (e.key === "Enter") {
+            sendMsg();
+        }
     });
 
     byId("searchInput").addEventListener("keydown", (e) => {
-        if (e.key === "Enter") searchUsers();
+        if (e.key === "Enter") {
+            searchUsers();
+        }
     });
 }
 
@@ -35,119 +40,178 @@ document.addEventListener("DOMContentLoaded", init);
 async function init() {
     bindUI();
 
-    if (!ensureToken()) return;
-
-    const res = await fetch("/me", {
-        headers: { "Authorization": token }
-    });
-
-    if (!res.ok) {
-        localStorage.removeItem("token");
-        token = null;
-        window.location.href = "/";
+    if (!ensureToken()) {
         return;
     }
 
-    const data = await res.json();
-    me = data.username;
-    byId("me").textContent = `@${me}`;
+    try {
+        const res = await fetch("/me", {
+            headers: {
+                "Authorization": token
+            }
+        });
 
-    await loadDialogs();
+        if (!res.ok) {
+            localStorage.removeItem("token");
+            token = null;
+
+            window.location.href = "/";
+            return;
+        }
+
+        const data = await res.json();
+
+        me = data.username;
+
+        byId("me").textContent = `@${me}`;
+
+        await loadDialogs();
+    } catch (err) {
+        console.error(err);
+    }
 }
 
 async function loadDialogs() {
-    const res = await fetch("/dialogs", {
-        headers: { "Authorization": token }
-    });
+    try {
+        const res = await fetch("/dialogs", {
+            headers: {
+                "Authorization": token
+            }
+        });
 
-    if (!res.ok) {
-        dialogs = [];
+        if (!res.ok) {
+            dialogs = [];
+            renderDialogs();
+            return;
+        }
+
+        const data = await res.json();
+
+        dialogs = Array.isArray(data)
+            ? data
+            : [];
+
         renderDialogs();
-        return;
-    }
 
-    const data = await res.json();
-    dialogs = Array.isArray(data) ? data : [];
-    renderDialogs();
+        if (dialogs.length > 0 && !currentDialogId) {
+            await openDialog(dialogs[0]);
+        }
 
-    if (dialogs.length > 0 && !currentDialogId) {
-        await openDialog(dialogs[0].id);
-    } else {
-        byId("chatHeader").textContent = "Select a dialog";
-        byId("chat").innerHTML = "";
+        if (dialogs.length === 0) {
+            byId("chatHeader").textContent = "Select a dialog";
+            byId("chat").innerHTML = "";
+        }
+    } catch (err) {
+        console.error(err);
     }
 }
 
 function renderDialogs() {
     const list = byId("dialogs");
+
     list.innerHTML = "";
 
     for (const dialog of dialogs) {
         const item = document.createElement("div");
-        item.className = "dialog-item" + (dialog.id === currentDialogId ? " active" : "");
-        item.onclick = () => openDialog(dialog.id);
+
+        item.className =
+            "dialog-item" +
+            (dialog.id === currentDialogId
+                ? " active"
+                : "");
+
+        item.onclick = () => {
+            openDialog(dialog);
+        };
 
         const title = document.createElement("div");
+
         title.className = "dialog-title";
         title.textContent = dialog.title;
 
         const preview = document.createElement("div");
+
         preview.className = "dialog-preview";
-        preview.textContent = dialog.last_message || "No messages yet";
+        preview.textContent =
+            dialog.last_message || "No messages yet";
 
         item.appendChild(title);
         item.appendChild(preview);
+
         list.appendChild(item);
     }
 }
 
 function closeWS() {
-    if (ws) {
-        ws.close();
-        ws = null;
+    if (!ws) {
+        return;
     }
+
+    ws.close();
+    ws = null;
 }
 
-async function openDialog(id) {
-    currentDialogId = id;
+async function openDialog(dialog) {
+    currentDialogId = dialog.id;
+
     renderDialogs();
 
-    closeWS();
-    await loadMessages(id);
-    connectWS(id);
+    byId("chatHeader").textContent = dialog.title;
 
-    const dialog = dialogs.find(d => d.id === id);
-    byId("chatHeader").textContent = dialog ? dialog.title : `Dialog #${id}`;
+    closeWS();
+
+    await loadMessages(dialog.id);
+
+    connectWS(dialog.title);
 }
 
 async function loadMessages(dialogId) {
-    const res = await fetch(`/messages?dialog_id=${dialogId}`, {
-        headers: { "Authorization": token }
-    });
+    try {
+        const res = await fetch(
+            `/messages?dialog_id=${dialogId}`,
+            {
+                headers: {
+                    "Authorization": token
+                }
+            }
+        );
 
-    if (!res.ok) return;
+        if (!res.ok) {
+            return;
+        }
 
-    const messages = await res.json();
-    const chat = byId("chat");
-    chat.innerHTML = "";
+        const messages = await res.json();
 
-    for (const msg of messages) {
-        addMessage(msg);
+        const chat = byId("chat");
+
+        chat.innerHTML = "";
+
+        for (const msg of messages) {
+            addMessage(msg);
+        }
+
+        chat.scrollTop = chat.scrollHeight;
+    } catch (err) {
+        console.error(err);
     }
-
-    chat.scrollTop = chat.scrollHeight;
 }
 
-function connectWS(dialogId) {
-    const protocol = location.protocol === "https:" ? "wss" : "ws";
+function connectWS(peerUsername) {
+    const protocol =
+        location.protocol === "https:"
+            ? "wss"
+            : "ws";
+
     ws = new WebSocket(
-        `${protocol}://${location.host}/ws?token=${encodeURIComponent(token)}&dialog_id=${dialogId}`
+        `${protocol}://${location.host}/ws?token=${encodeURIComponent(token)}&peer=${encodeURIComponent(peerUsername)}`
     );
 
     ws.onmessage = (e) => {
         const msg = JSON.parse(e.data);
-        if (msg.dialog_id !== currentDialogId) return;
+
         addMessage(msg);
+
+        updateDialogPreview(msg);
     };
 
     ws.onclose = () => {
@@ -157,36 +221,70 @@ function connectWS(dialogId) {
 
 function addMessage(msg) {
     const chat = byId("chat");
+
     const div = document.createElement("div");
-    div.className = "message" + (msg.username === me ? " me" : "");
+
+    div.className =
+        "message" +
+        (msg.username === me
+            ? " me"
+            : "");
 
     const name = document.createElement("span");
+
     name.className = "username";
     name.textContent = msg.username;
 
     const text = document.createElement("span");
+
     text.className = "text";
     text.textContent = msg.text;
 
     div.appendChild(name);
     div.appendChild(text);
+
     chat.appendChild(div);
+
     chat.scrollTop = chat.scrollHeight;
 }
 
+function updateDialogPreview(msg) {
+    const dialog = dialogs.find(
+        d => d.id === currentDialogId
+    );
+
+    if (!dialog) {
+        return;
+    }
+
+    dialog.last_message = msg.text;
+
+    renderDialogs();
+}
+
 function sendMsg() {
-    if (!ws || !currentDialogId) return;
+    if (!ws || !currentDialogId) {
+        return;
+    }
 
     const input = byId("msg");
-    const text = input.value.trim();
-    if (!text) return;
 
-    ws.send(JSON.stringify({ text }));
+    const text = input.value.trim();
+
+    if (!text) {
+        return;
+    }
+
+    ws.send(JSON.stringify({
+        text: text
+    }));
+
     input.value = "";
 }
 
 async function searchUsers() {
     const q = byId("searchInput").value.trim();
+
     const results = byId("searchResults");
 
     if (!q) {
@@ -194,53 +292,91 @@ async function searchUsers() {
         return;
     }
 
-    const res = await fetch(`/users/search?q=${encodeURIComponent(q)}`, {
-        headers: { "Authorization": token }
-    });
+    try {
+        const res = await fetch(
+            `/users/search?q=${encodeURIComponent(q)}`,
+            {
+                headers: {
+                    "Authorization": token
+                }
+            }
+        );
 
-    if (!res.ok) return;
+        if (!res.ok) {
+            return;
+        }
 
-    const users = await res.json();
-    results.innerHTML = "";
+        const users = await res.json();
 
-    for (const username of users) {
-        const item = document.createElement("div");
-        item.className = "user-item";
-        item.textContent = username;
-        item.onclick = () => createDialog(username);
-        results.appendChild(item);
+        results.innerHTML = "";
+
+        for (const username of users) {
+            if (username === me) {
+                continue;
+            }
+
+            const item = document.createElement("div");
+
+            item.className = "user-item";
+            item.textContent = username;
+
+            item.onclick = () => {
+                createDialog(username);
+            };
+
+            results.appendChild(item);
+        }
+    } catch (err) {
+        console.error(err);
     }
 }
 
 async function createDialog(username) {
-    const res = await fetch("/dialogs/create", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": token
-        },
-        body: JSON.stringify({ username })
-    });
+    try {
+        const res = await fetch("/dialogs/create", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": token
+            },
+            body: JSON.stringify({
+                username: username
+            })
+        });
 
-    if (!res.ok) {
-        alert(await res.text());
-        return;
+        if (!res.ok) {
+            alert(await res.text());
+            return;
+        }
+
+        const data = await res.json();
+
+        byId("searchInput").value = "";
+        byId("searchResults").innerHTML = "";
+
+        await loadDialogs();
+
+        const dialog = dialogs.find(
+            d => d.id === data.dialog_id
+        );
+
+        if (dialog) {
+            await openDialog(dialog);
+        }
+    } catch (err) {
+        console.error(err);
     }
-
-    const data = await res.json();
-    byId("searchInput").value = "";
-    byId("searchResults").innerHTML = "";
-
-    await loadDialogs();
-    await openDialog(data.dialog_id);
 }
 
 function logout() {
     localStorage.removeItem("token");
+
     token = null;
     me = "";
     currentDialogId = null;
+    dialogs = [];
 
     closeWS();
+
     window.location.href = "/";
 }

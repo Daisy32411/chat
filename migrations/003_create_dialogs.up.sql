@@ -1,6 +1,6 @@
 CREATE TABLE dialogs (
     id SERIAL PRIMARY KEY,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 )
 
 CREATE TABLE dialog_members (

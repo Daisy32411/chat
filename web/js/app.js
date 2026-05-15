@@ -4,7 +4,13 @@ let me = "";
 let currentDialogId = null;
 let dialogs = [];
 
+function byId(id) {
+    return document.getElementById(id);
+}
+
 async function init() {
+    bindUI();
+
     if (!token) {
         showAuth();
         return;
@@ -25,20 +31,40 @@ async function init() {
 
     const data = await res.json();
     me = data.username;
-    document.getElementById("me").textContent = `@${me}`;
+    byId("me").textContent = `@${me}`;
 
     showChat();
     await loadDialogs();
 }
 
+function bindUI() {
+    byId("registerBtn").addEventListener("click", register);
+    byId("loginBtn").addEventListener("click", login);
+    byId("logoutBtn").addEventListener("click", logout);
+    byId("sendBtn").addEventListener("click", sendMsg);
+    byId("searchBtn").addEventListener("click", searchUsers);
+
+    byId("msg").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            sendMsg();
+        }
+    });
+
+    byId("searchInput").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            searchUsers();
+        }
+    });
+}
+
 function showChat() {
-    document.getElementById("auth").classList.add("hidden");
-    document.getElementById("chatBox").classList.remove("hidden");
+    byId("auth").classList.add("hidden");
+    byId("chatBox").classList.remove("hidden");
 }
 
 function showAuth() {
-    document.getElementById("auth").classList.remove("hidden");
-    document.getElementById("chatBox").classList.add("hidden");
+    byId("auth").classList.remove("hidden");
+    byId("chatBox").classList.add("hidden");
 }
 
 async function register() {
@@ -48,12 +74,19 @@ async function register() {
             "Content-Type": "application/json"
         },
         body: JSON.stringify({
-            username: document.getElementById("username").value,
-            password: document.getElementById("password").value
+            username: byId("username").value,
+            password: byId("password").value
         })
     });
 
-    alert(await res.text());
+    const text = await res.text();
+
+    if (!res.ok) {
+        alert(text);
+        return;
+    }
+
+    alert(text || "registered");
 }
 
 async function login() {
@@ -61,8 +94,8 @@ async function login() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            username: document.getElementById("username").value,
-            password: document.getElementById("password").value
+            username: byId("username").value,
+            password: byId("password").value
         })
     });
 
@@ -72,11 +105,23 @@ async function login() {
     }
 
     const data = await res.json();
-
     token = data.token;
     localStorage.setItem("token", token);
 
+    const meRes = await fetch("/me", {
+        headers: {
+            "Authorization": token
+        }
+    });
+
+    if (meRes.ok) {
+        const meData = await meRes.json();
+        me = meData.username;
+        byId("me").textContent = `@${me}`;
+    }
+
     showChat();
+    await loadDialogs();
 }
 
 async function loadDialogs() {
@@ -98,13 +143,13 @@ async function loadDialogs() {
     }
 
     if (dialogs.length === 0) {
-        document.getElementById("chatHeader").textContent = "Select a dialog";
-        document.getElementById("chat").innerHTML = "";
+        byId("chatHeader").textContent = "Select a dialog";
+        byId("chat").innerHTML = "";
     }
 }
 
 function renderDialogs() {
-    const list = document.getElementById("dialogs");
+    const list = byId("dialogs");
     list.innerHTML = "";
 
     for (const dialog of dialogs) {
@@ -127,9 +172,7 @@ function renderDialogs() {
 }
 
 function closeWS() {
-    if (!ws) {
-        return;
-    }
+    if (!ws) return;
 
     const socket = ws;
     ws = null;
@@ -145,7 +188,7 @@ async function openDialog(id) {
     connectWS(id);
 
     const dialog = dialogs.find(d => d.id === id);
-    document.getElementById("chatHeader").textContent = dialog ? dialog.title : `Dialog #${id}`;
+    byId("chatHeader").textContent = dialog ? dialog.title : `Dialog #${id}`;
 }
 
 async function loadMessages(dialogId) {
@@ -160,7 +203,7 @@ async function loadMessages(dialogId) {
     }
 
     const messages = await res.json();
-    const chat = document.getElementById("chat");
+    const chat = byId("chat");
     chat.innerHTML = "";
 
     for (const msg of messages) {
@@ -196,7 +239,7 @@ function connectWS(dialogId) {
 }
 
 function addMessage(msg) {
-    const chat = document.getElementById("chat");
+    const chat = byId("chat");
     const div = document.createElement("div");
     div.className = "message" + (msg.username === me ? " me" : "");
 
@@ -215,16 +258,12 @@ function addMessage(msg) {
 }
 
 function sendMsg() {
-    if (!ws || !currentDialogId) {
-        return;
-    }
+    if (!ws || !currentDialogId) return;
 
-    const input = document.getElementById("msg");
+    const input = byId("msg");
     const text = input.value.trim();
 
-    if (!text) {
-        return;
-    }
+    if (!text) return;
 
     ws.send(JSON.stringify({
         text: text
@@ -234,8 +273,8 @@ function sendMsg() {
 }
 
 async function searchUsers() {
-    const q = document.getElementById("searchInput").value.trim();
-    const results = document.getElementById("searchResults");
+    const q = byId("searchInput").value.trim();
+    const results = byId("searchResults");
 
     if (!q) {
         results.innerHTML = "";
@@ -249,6 +288,7 @@ async function searchUsers() {
     });
 
     if (!res.ok) {
+        alert(await res.text());
         return;
     }
 
@@ -282,8 +322,8 @@ async function createDialog(username) {
     }
 
     const data = await res.json();
-    document.getElementById("searchInput").value = "";
-    document.getElementById("searchResults").innerHTML = "";
+    byId("searchInput").value = "";
+    byId("searchResults").innerHTML = "";
 
     await loadDialogs();
     await openDialog(data.dialog_id);
@@ -297,11 +337,11 @@ function logout() {
 
     closeWS();
     showAuth();
-    document.getElementById("me").textContent = "";
-    document.getElementById("dialogs").innerHTML = "";
-    document.getElementById("searchResults").innerHTML = "";
-    document.getElementById("chat").innerHTML = "";
-    document.getElementById("chatHeader").textContent = "Select a dialog";
+    byId("me").textContent = "";
+    byId("dialogs").innerHTML = "";
+    byId("searchResults").innerHTML = "";
+    byId("chat").innerHTML = "";
+    byId("chatHeader").textContent = "Select a dialog";
 }
 
 init();

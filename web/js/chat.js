@@ -1,4 +1,4 @@
-console.log("app.js loaded");
+console.log("chat.js loaded");
 
 let ws = null;
 let token = localStorage.getItem("token");
@@ -8,46 +8,34 @@ let dialogs = [];
 
 const byId = (id) => document.getElementById(id);
 
-function setStatus(text) {
-    const el = byId("status");
-    if (el) el.textContent = text;
+function ensureToken() {
+    if (!token) {
+        window.location.href = "/";
+        return false;
+    }
+    return true;
 }
 
-/* ---------------- UI BIND ---------------- */
-
 function bindUI() {
-    const registerBtn = byId("registerBtn");
-    const loginBtn = byId("loginBtn");
-    const logoutBtn = byId("logoutBtn");
-    const sendBtn = byId("sendBtn");
-    const searchBtn = byId("searchBtn");
+    byId("logoutBtn").addEventListener("click", logout);
+    byId("sendBtn").addEventListener("click", sendMsg);
+    byId("searchBtn").addEventListener("click", searchUsers);
 
-    registerBtn?.addEventListener("click", register);
-    loginBtn?.addEventListener("click", login);
-    logoutBtn?.addEventListener("click", logout);
-    sendBtn?.addEventListener("click", sendMsg);
-    searchBtn?.addEventListener("click", searchUsers);
-
-    byId("msg")?.addEventListener("keydown", (e) => {
+    byId("msg").addEventListener("keydown", (e) => {
         if (e.key === "Enter") sendMsg();
     });
 
-    byId("searchInput")?.addEventListener("keydown", (e) => {
+    byId("searchInput").addEventListener("keydown", (e) => {
         if (e.key === "Enter") searchUsers();
     });
 }
-
-/* ---------------- INIT ---------------- */
 
 document.addEventListener("DOMContentLoaded", init);
 
 async function init() {
     bindUI();
 
-    if (!token) {
-        showAuth();
-        return;
-    }
+    if (!ensureToken()) return;
 
     const res = await fetch("/me", {
         headers: { "Authorization": token }
@@ -56,103 +44,42 @@ async function init() {
     if (!res.ok) {
         localStorage.removeItem("token");
         token = null;
-        showAuth();
+        window.location.href = "/";
         return;
     }
 
     const data = await res.json();
     me = data.username;
-
     byId("me").textContent = `@${me}`;
 
-    showChat();
     await loadDialogs();
 }
-
-/* ---------------- UI ---------------- */
-
-function showAuth() {
-    byId("auth").classList.remove("hidden");
-    byId("chatBox").classList.add("hidden");
-}
-
-function showChat() {
-    byId("auth").classList.add("hidden");
-    byId("chatBox").classList.remove("hidden");
-}
-
-/* ---------------- AUTH ---------------- */
-
-async function register() {
-    const res = await fetch("/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            username: byId("username").value,
-            password: byId("password").value
-        })
-    });
-
-    alert(await res.text());
-}
-
-async function login() {
-    const res = await fetch("/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            username: byId("username").value,
-            password: byId("password").value
-        })
-    });
-
-    if (!res.ok) {
-        alert(await res.text());
-        return;
-    }
-
-    const data = await res.json();
-
-    token = data.token;
-    localStorage.setItem("token", token);
-
-    const meRes = await fetch("/me", {
-        headers: { "Authorization": token }
-    });
-
-    if (meRes.ok) {
-        const meData = await meRes.json();
-        me = meData.username;
-        byId("me").textContent = `@${me}`;
-    }
-
-    showChat();
-    await loadDialogs();
-}
-
-/* ---------------- DIALOGS ---------------- */
 
 async function loadDialogs() {
     const res = await fetch("/dialogs", {
         headers: { "Authorization": token }
     });
 
-    if (!res.ok) return;
+    if (!res.ok) {
+        dialogs = [];
+        renderDialogs();
+        return;
+    }
 
     const data = await res.json();
     dialogs = Array.isArray(data) ? data : [];
-
     renderDialogs();
 
-    if (!currentDialogId && dialogs.length > 0) {
+    if (dialogs.length > 0 && !currentDialogId) {
         await openDialog(dialogs[0].id);
+    } else {
+        byId("chatHeader").textContent = "Select a dialog";
+        byId("chat").innerHTML = "";
     }
 }
 
 function renderDialogs() {
     const list = byId("dialogs");
-    if (!list) return;
-
     list.innerHTML = "";
 
     for (const dialog of dialogs) {
@@ -161,19 +88,25 @@ function renderDialogs() {
         item.onclick = () => openDialog(dialog.id);
 
         const title = document.createElement("div");
+        title.className = "dialog-title";
         title.textContent = dialog.title;
 
         const preview = document.createElement("div");
-        preview.textContent = dialog.last_message || "No messages";
+        preview.className = "dialog-preview";
+        preview.textContent = dialog.last_message || "No messages yet";
 
         item.appendChild(title);
         item.appendChild(preview);
-
         list.appendChild(item);
     }
 }
 
-/* ---------------- CHAT ---------------- */
+function closeWS() {
+    if (ws) {
+        ws.close();
+        ws = null;
+    }
+}
 
 async function openDialog(id) {
     currentDialogId = id;
@@ -184,7 +117,7 @@ async function openDialog(id) {
     connectWS(id);
 
     const dialog = dialogs.find(d => d.id === id);
-    byId("chatHeader").textContent = dialog?.title || `Dialog #${id}`;
+    byId("chatHeader").textContent = dialog ? dialog.title : `Dialog #${id}`;
 }
 
 async function loadMessages(dialogId) {
@@ -196,7 +129,6 @@ async function loadMessages(dialogId) {
 
     const messages = await res.json();
     const chat = byId("chat");
-
     chat.innerHTML = "";
 
     for (const msg of messages) {
@@ -206,35 +138,15 @@ async function loadMessages(dialogId) {
     chat.scrollTop = chat.scrollHeight;
 }
 
-function addMessage(msg) {
-    const chat = byId("chat");
-
-    const div = document.createElement("div");
-    div.className = "message" + (msg.username === me ? " me" : "");
-
-    div.innerHTML = `
-        <span class="username">${msg.username}</span>
-        <span class="text">${msg.text}</span>
-    `;
-
-    chat.appendChild(div);
-    chat.scrollTop = chat.scrollHeight;
-}
-
-/* ---------------- WS ---------------- */
-
 function connectWS(dialogId) {
     const protocol = location.protocol === "https:" ? "wss" : "ws";
-
     ws = new WebSocket(
         `${protocol}://${location.host}/ws?token=${encodeURIComponent(token)}&dialog_id=${dialogId}`
     );
 
     ws.onmessage = (e) => {
         const msg = JSON.parse(e.data);
-
         if (msg.dialog_id !== currentDialogId) return;
-
         addMessage(msg);
     };
 
@@ -243,28 +155,35 @@ function connectWS(dialogId) {
     };
 }
 
-function closeWS() {
-    if (ws) {
-        ws.close();
-        ws = null;
-    }
-}
+function addMessage(msg) {
+    const chat = byId("chat");
+    const div = document.createElement("div");
+    div.className = "message" + (msg.username === me ? " me" : "");
 
-/* ---------------- SEND ---------------- */
+    const name = document.createElement("span");
+    name.className = "username";
+    name.textContent = msg.username;
+
+    const text = document.createElement("span");
+    text.className = "text";
+    text.textContent = msg.text;
+
+    div.appendChild(name);
+    div.appendChild(text);
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+}
 
 function sendMsg() {
     if (!ws || !currentDialogId) return;
 
     const input = byId("msg");
     const text = input.value.trim();
-
     if (!text) return;
 
     ws.send(JSON.stringify({ text }));
     input.value = "";
 }
-
-/* ---------------- SEARCH ---------------- */
 
 async function searchUsers() {
     const q = byId("searchInput").value.trim();
@@ -282,15 +201,14 @@ async function searchUsers() {
     if (!res.ok) return;
 
     const users = await res.json();
-
     results.innerHTML = "";
 
-    for (const u of users) {
-        const div = document.createElement("div");
-        div.className = "user-item";
-        div.textContent = u;
-        div.onclick = () => createDialog(u);
-        results.appendChild(div);
+    for (const username of users) {
+        const item = document.createElement("div");
+        item.className = "user-item";
+        item.textContent = username;
+        item.onclick = () => createDialog(username);
+        results.appendChild(item);
     }
 }
 
@@ -310,20 +228,19 @@ async function createDialog(username) {
     }
 
     const data = await res.json();
+    byId("searchInput").value = "";
+    byId("searchResults").innerHTML = "";
 
     await loadDialogs();
     await openDialog(data.dialog_id);
 }
 
-/* ---------------- LOGOUT ---------------- */
-
 function logout() {
     localStorage.removeItem("token");
-
     token = null;
     me = "";
     currentDialogId = null;
 
     closeWS();
-    showAuth();
+    window.location.href = "/";
 }

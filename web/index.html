@@ -3,56 +3,20 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chat</title>
-
+    <title>Login</title>
     <link rel="stylesheet" href="/css/style.css">
-
-    <!-- ВАЖНО: defer -->
-    <script src="/js/app.js" defer></script>
+    <script src="/js/auth.js" defer></script>
 </head>
 <body>
 
-<!-- AUTH -->
 <div id="auth">
     <div class="auth-card">
         <h2>Chat</h2>
-
         <div id="status"></div>
-
         <input id="username" placeholder="username" />
         <input id="password" type="password" placeholder="password" />
-
         <button id="registerBtn" type="button">Register</button>
         <button id="loginBtn" type="button">Login</button>
-    </div>
-</div>
-
-<!-- CHAT -->
-<div id="chatBox" class="hidden">
-    <div id="topbar">
-        <div id="me"></div>
-        <button id="logoutBtn" type="button">Logout</button>
-    </div>
-
-    <div id="app">
-        <aside id="sidebar">
-            <input id="searchInput" placeholder="Search users..." />
-            <button id="searchBtn" type="button">Search</button>
-
-            <div id="searchResults"></div>
-            <div id="dialogs"></div>
-        </aside>
-
-        <main id="chatPane">
-            <div id="chatHeader">Select a dialog</div>
-
-            <div id="chat"></div>
-
-            <div id="composer">
-                <input id="msg" placeholder="type message..." />
-                <button id="sendBtn" type="button">Send</button>
-            </div>
-        </main>
     </div>
 </div>
 

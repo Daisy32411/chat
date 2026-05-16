@@ -2,12 +2,44 @@ package main
 
 import (
 	"log"
+	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+
 	"mini_chat/config"
 	"mini_chat/internal/db"
 	"mini_chat/internal/handlers"
-	"mini_chat/internal/middleware"
-	"net/http"
+	authMiddleware "mini_chat/internal/middleware"
 )
+
+func setupRouter() *chi.Mux {
+	r := chi.NewRouter()
+
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+
+	fs := http.FileServer(http.Dir("./templates"))
+	r.Handle("/static/*", http.StripPrefix("/static/", fs))
+
+	r.Get("/", handlers.IndexHandler)
+	r.Get("/login", handlers.LoginHandler)
+	r.Post("/login", handlers.LoginHandler)
+	r.Get("/register", handlers.RegisterHandler)
+	r.Post("/register", handlers.RegisterHandler)
+	r.Get("/logout", handlers.LogoutHandler)
+
+	r.Group(func(r chi.Router) {
+		r.Use(authMiddleware.AuthMiddleware)
+		r.Get("/dashboard", handlers.DashboardHandler)
+		r.Get("/ws", handlers.ChatWebSocket)
+		r.Get("/api/dialogs", handlers.GetDialogsHandler)
+		r.Get("/api/search", handlers.SearchUsersHandler)
+		r.Get("/api/messages", handlers.GetMessagesHandler)
+	})
+
+	return r
+}
 
 func main() {
 	cfg := config.Load()
@@ -17,26 +49,10 @@ func main() {
 	}
 	defer db.Close()
 
-	// Запускаем WebSocket hub
 	go handlers.RunHub()
 
-	// Статические файлы (CSS, JS) из папки templates
-	// Теперь URL вида /static/css/login.css будут искать файл в ./templates/css/login.css
-	fs := http.FileServer(http.Dir("./templates"))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	r := setupRouter()
 
-	http.HandleFunc("/", handlers.IndexHandler)
-	http.HandleFunc("/login", handlers.LoginHandler)
-	http.HandleFunc("/register", handlers.RegisterHandler)
-	http.HandleFunc("/dashboard", middleware.AuthMiddleware(handlers.DashboardHandler))
-	http.HandleFunc("/logout", handlers.LogoutHandler)
-
-	// Маршруты чата
-	http.HandleFunc("/ws", middleware.AuthMiddleware(handlers.ChatWebSocket))
-	http.HandleFunc("/api/dialogs", middleware.AuthMiddleware(handlers.GetDialogsHandler))
-	http.HandleFunc("/api/search", middleware.AuthMiddleware(handlers.SearchUsersHandler))
-	http.HandleFunc("/api/messages", middleware.AuthMiddleware(handlers.GetMessagesHandler))
-
-	log.Println("Server started on :" + cfg.Port)
-	log.Fatal(http.ListenAndServe(":"+cfg.Port, nil))
+	log.Printf("Server started on :%s", cfg.Port)
+	log.Fatal(http.ListenAndServe(":"+cfg.Port, r))
 }

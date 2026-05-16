@@ -5,44 +5,59 @@
 }
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: #e9ecef;
+    background: #333333;
     height: 100vh;
     display: flex;
 }
 .sidebar {
     width: 300px;
-    background: #2c3e50;
-    color: white;
+    min-width: 180px;
+    max-width: 500px;
+    background: #1a1a1a;
+    color: rgb(255, 255, 255);
     display: flex;
     flex-direction: column;
-    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    box-shadow: 5px 0 5px rgba(43, 43, 43, 0.1);
 }
-.sidebar-header {
-    padding: 20px;
-    background: #1a252f;
-    text-align: center;
+.resizer {
+    width: 2px;
+    background: #742121;
+    cursor: ew-resize;
+    transition: background 0.2s;
 }
-.sidebar-header h2 {
-    font-size: 1.2rem;
-}
-.sidebar-header p {
-    font-size: 0.9rem;
-    opacity: 0.8;
+.resizer:hover {
+    background: #ff0000;
 }
 .search-box {
     padding: 15px;
-    background: #34495e;
+    background: #333335;
     position: relative;
 }
+
 .search-box input {
     width: 100%;
-    padding: 8px;
-    border: none;
-    border-radius: 20px;
+    padding: 10px 12px;
+    background: #1e1e1e;
+    border: 1px solid #555;
+    border-radius: 24px;
+    color: #f0f0f0;
+    font-size: 0.9rem;
     outline: none;
+    transition: all 0.2s;
 }
+
+.search-box input:focus {
+    border-color: #a32828;
+    box-shadow: 0 0 0 2px rgba(163, 40, 40, 0.3);
+}
+
+.search-box input::placeholder {
+    color: #888;
+    font-style: italic;
+}
+
 .search-results {
-    background: #2c3e50;
+    background: #868687;
     position: absolute;
     width: calc(100% - 30px);
     margin-top: 5px;
@@ -54,10 +69,10 @@ body {
 .search-result-item {
     padding: 8px 15px;
     cursor: pointer;
-    border-bottom: 1px solid #3d566e;
+    border-bottom: 1px solid #282828;
 }
 .search-result-item:hover {
-    background: #1abc9c;
+    background: #3c3c3c;
 }
 .dialogs-list {
     flex: 1;
@@ -65,15 +80,15 @@ body {
 }
 .dialog-item {
     padding: 12px 15px;
-    border-bottom: 1px solid #3d566e;
+    border-bottom: 1px solid #2a2929;
     cursor: pointer;
     transition: background 0.2s;
 }
 .dialog-item:hover {
-    background: #3d566e;
+    background: #333333;
 }
 .dialog-item.active {
-    background: #1abc9c;
+    background: #232424;
 }
 .dialog-name {
     font-weight: bold;
@@ -89,13 +104,13 @@ body {
 .logout-btn {
     margin: 15px;
     padding: 10px;
-    background: #e74c3c;
+    background: #a32828;
     text-align: center;
     border-radius: 5px;
     cursor: pointer;
 }
 .logout-btn a {
-    color: white;
+    color: rgb(255, 255, 255);
     text-decoration: none;
     display: block;
 }
@@ -103,12 +118,13 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    background: white;
+    background: rgb(34, 33, 33);
 }
 .chat-header {
     padding: 20px;
-    background: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
+    background: #252525;
+    border-bottom: 1px solid #000000;
+    color: #c6c5c5;
     font-size: 1.2rem;
     font-weight: bold;
 }
@@ -134,12 +150,18 @@ body {
 .message-bubble {
     padding: 10px 15px;
     border-radius: 18px;
-    background: #e9ecef;
-    word-wrap: break-word;
+    word-wrap: break-word; 
+    word-break: break-word;   
+    overflow-wrap: break-word;
+    background: #121212;
+    color: #ffffff;
+    font-size: 1.3rem;
 }
+
 .message.sent .message-bubble {
-    background: #007bff;
-    color: white;
+    background: #5f5f5f;
+    color: rgb(255, 255, 255);
+    font-size: 1.3rem;
 }
 .message-info {
     font-size: 0.7rem;
@@ -148,25 +170,127 @@ body {
 }
 .input-area {
     padding: 15px;
-    border-top: 1px solid #dee2e6;
+    border-top: 1px solid #000000;
     display: flex;
     gap: 10px;
 }
 .input-area input {
     flex: 1;
-    padding: 10px;
-    border: 1px solid #ced4da;
-    border-radius: 20px;
+    padding: 10px 14px;
+    background: #1e1e1e;
+    border: 1px solid #555;
+    border-radius: 24px;
+    color: #f0f0f0;
+    font-size: 0.9rem;
     outline: none;
+    transition: all 0.2s;
+}
+
+.input-area input:focus {
+    border-color: #a32828;
+    box-shadow: 0 0 0 2px rgba(163, 40, 40, 0.3);
+}
+
+.input-area input::placeholder {
+    color: #888;
+    font-style: italic;
 }
 .input-area button {
     padding: 10px 20px;
-    background: #007bff;
+    background: #a32828;
     color: white;
     border: none;
-    border-radius: 20px;
+    border-radius: 24px;
     cursor: pointer;
+    transition: background 0.2s;
 }
 .input-area button:hover {
-    background: #0056b3;
+    background: #7a1f1f;
+}
+
+/* Кнопка-гамбургер */
+.menu-toggle {
+    font-size: 24px;
+    cursor: pointer;
+    margin-right: 10px;
+    color: white;
+    user-select: none;
+    padding-bottom: 10px;
+}
+.search-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.search-box input {
+    flex: 1;
+}
+
+/* Правая панель профиля */
+.profile-panel {
+    position: fixed;
+    top: 0;
+    right: -350px;
+    width: 300px;
+    height: 100%;
+    background: #1e1e1e;
+    box-shadow: -2px 0 10px rgba(0,0,0,0.5);
+    transition: right 0.3s ease;
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    color: #eee;
+}
+.profile-panel.open {
+    right: 0;
+}
+.profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background: #2a2a2a;
+    border-bottom: 1px solid #444;
+    font-size: 1.2rem;
+}
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    color: #eee;
+}
+.profile-content {
+    padding: 20px;
+    flex: 1;
+}
+.profile-username {
+    margin-bottom: 20px;
+    font-size: 1.1rem;
+}
+.profile-logout-btn {
+    background: #a32828;
+    color: white;
+    border: none;
+    padding: 10px;
+    width: 100%;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+}
+.profile-logout-btn:hover {
+    background: #7a1f1f;
+}
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    display: none;
+}
+.overlay.active {
+    display: block;
 }

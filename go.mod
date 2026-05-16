@@ -3,6 +3,7 @@ module mini_chat
 go 1.25.7
 
 require (
+	github.com/go-chi/chi/v5 v5.2.5
 	github.com/gorilla/websocket v1.5.3
 	github.com/jackc/pgx/v5 v5.9.2
 	golang.org/x/crypto v0.51.0

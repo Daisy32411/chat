@@ -2,6 +2,40 @@ let ws = null;
 let currentChat = null;
 const currentUser = document.body.getAttribute('data-username');
 
+// Профильная панель
+const menuToggle = document.getElementById('menuToggle');
+const profilePanel = document.getElementById('profilePanel');
+const overlay = document.getElementById('overlay');
+const closeProfileBtn = document.getElementById('closeProfileBtn');
+const logoutFromProfile = document.getElementById('logoutFromProfile');
+
+function openProfilePanel() {
+    profilePanel.classList.add('open');
+    overlay.classList.add('active');
+}
+
+function closeProfilePanel() {
+    profilePanel.classList.remove('open');
+    overlay.classList.remove('active');
+}
+
+if (menuToggle) {
+    menuToggle.addEventListener('click', openProfilePanel);
+}
+if (closeProfileBtn) {
+    closeProfileBtn.addEventListener('click', closeProfilePanel);
+}
+if (overlay) {
+    overlay.addEventListener('click', closeProfilePanel);
+}
+
+// Выход из профиля
+if (logoutFromProfile) {
+    logoutFromProfile.addEventListener('click', function() {
+        window.location.href = '/logout';
+    });
+}
+
 function connectWebSocket() {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     ws = new WebSocket(protocol + "//" + window.location.host + "/ws");
@@ -10,9 +44,12 @@ function connectWebSocket() {
         const data = JSON.parse(event.data);
         if (currentChat && (data.from === currentChat || data.to === currentChat)) {
             appendMessage(data.from, data.text, data.from === currentUser ? "sent" : "received");
-        } else {
-            loadDialogs();
+            // Прокрутка вниз
+            const container = document.getElementById("messagesContainer");
+            container.scrollTop = container.scrollHeight;
         }
+        // Обновляем список диалогов, чтобы поднять актуальный чат наверх
+        loadDialogs();
     };
     ws.onerror = (error) => console.error("WebSocket error", error);
     ws.onclose = () => {
@@ -41,7 +78,7 @@ function loadDialogs() {
 
 function openChat(username) {
     currentChat = username;
-    document.getElementById("chatHeader").innerText = `Чат с ${username}`;
+    document.getElementById("chatHeader").innerText = `${username}`;
     document.getElementById("inputArea").style.display = "flex";
     fetch(`/api/messages?with=${encodeURIComponent(username)}`)
         .then(res => res.json())
@@ -54,15 +91,15 @@ function openChat(username) {
             });
             container.scrollTop = container.scrollHeight;
         });
-    loadDialogs();
+    loadDialogs(); // обновить активный класс
 }
 
 function appendMessage(sender, text, direction) {
     const container = document.getElementById("messagesContainer");
     const div = document.createElement("div");
     div.className = `message ${direction}`;
-    div.innerHTML = `<div class="message-bubble">${escapeHtml(text)}</div>
-                     <div class="message-info">${escapeHtml(sender)}</div>`;
+    // Убираем блок с информацией об отправителе
+    div.innerHTML = `<div class="message-bubble">${escapeHtml(text)}</div>`;
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
 }
@@ -73,6 +110,10 @@ function sendMessage() {
     const text = input.value.trim();
     if (!text) return;
     ws.send(JSON.stringify({ to: currentChat, text: text }));
+    // Оптимистичное обновление – сразу добавляем своё сообщение
+    appendMessage(currentUser, text, "sent");
+    // Обновляем список диалогов, чтобы поднять этот чат наверх
+    loadDialogs();
     input.value = "";
 }
 
@@ -85,6 +126,32 @@ function escapeHtml(str) {
     });
 }
 
+// Закрытие чата по ESC
+function closeChat() {
+    if (!currentChat) return;
+    currentChat = null;
+    document.getElementById("chatHeader").innerText = "";
+    document.getElementById("inputArea").style.display = "none";
+    document.getElementById("messagesContainer").innerHTML = "";
+    document.querySelectorAll('.dialog-item').forEach(el => el.classList.remove('active'));
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        e.preventDefault();
+        // Если профильная панель открыта - закрываем её
+        if (profilePanel && profilePanel.classList.contains('open')) {
+            closeProfilePanel();
+        } else {
+            closeChat();
+        }
+        // Скрываем поисковые подсказки
+        const results = document.getElementById("searchResults");
+        if (results) results.style.display = "none";
+    }
+});
+
+// Поиск пользователей
 let searchTimeout;
 document.getElementById("searchInput").addEventListener("input", function(e) {
     clearTimeout(searchTimeout);
@@ -118,6 +185,7 @@ document.getElementById("searchInput").addEventListener("input", function(e) {
             });
     }, 300);
 });
+
 document.addEventListener("click", function(e) {
     if (!e.target.closest(".search-box")) {
         document.getElementById("searchResults").style.display = "none";
@@ -128,6 +196,45 @@ document.getElementById("sendBtn").addEventListener("click", sendMessage);
 document.getElementById("messageInput").addEventListener("keypress", function(e) {
     if (e.key === "Enter") sendMessage();
 });
+
+// === НОВЫЙ КОД: ресайзер левой панели ===
+const sidebar = document.getElementById('sidebar');
+const resizer = document.getElementById('resizer');
+
+if (sidebar && resizer) {
+    let startX, startWidth;
+
+    function doResize(e) {
+        const newWidth = startWidth + (e.clientX - startX);
+        if (newWidth >= 180 && newWidth <= 500) {
+            sidebar.style.width = newWidth + 'px';
+            localStorage.setItem('sidebarWidth', newWidth);
+        }
+    }
+
+    function stopResize() {
+        document.documentElement.removeEventListener('mousemove', doResize);
+        document.documentElement.removeEventListener('mouseup', stopResize);
+    }
+
+    resizer.addEventListener('mousedown', function(e) {
+        startX = e.clientX;
+        startWidth = parseInt(window.getComputedStyle(sidebar).width, 10);
+        document.documentElement.addEventListener('mousemove', doResize);
+        document.documentElement.addEventListener('mouseup', stopResize);
+        e.preventDefault();
+    });
+
+    // Восстановить сохранённую ширину
+    const saved = localStorage.getItem('sidebarWidth');
+    if (saved) {
+        const w = parseInt(saved, 10);
+        if (w >= 180 && w <= 500) {
+            sidebar.style.width = w + 'px';
+        }
+    }
+}
+// === КОНЕЦ НОВОГО КОДА ===
 
 connectWebSocket();
 loadDialogs();

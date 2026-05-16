@@ -10,8 +10,8 @@ type contextKey string
 
 const UserKey contextKey = "username"
 
-func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func AuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("session_id")
 		if err != nil {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
@@ -24,5 +24,5 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 		ctx := context.WithValue(r.Context(), UserKey, username)
 		next.ServeHTTP(w, r.WithContext(ctx))
-	}
+	})
 }

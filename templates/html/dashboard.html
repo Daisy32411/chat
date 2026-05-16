@@ -7,27 +7,38 @@
     <script src="/static/js/dashboard.js" defer></script>
 </head>
 <body data-username="{{.}}">
-<div class="sidebar">
-    <div class="sidebar-header">
-        <h2>Добро пожаловать, {{.}}!</h2>
-        <p>Ваши диалоги</p>
-    </div>
+<div class="sidebar" id="sidebar">
     <div class="search-box">
-        <input type="text" id="searchInput" placeholder="Поиск пользователей...">
+        <div class="menu-toggle" id="menuToggle">☰</div>
+        <input type="text" id="searchInput" placeholder="Search">
         <div id="searchResults" class="search-results" style="display:none;"></div>
     </div>
     <div class="dialogs-list" id="dialogsList"></div>
-    <div class="logout-btn">
-        <a href="/logout">Выйти</a>
-    </div>
+    <!-- удаляем logout-btn отсюда -->
 </div>
+<div class="resizer" id="resizer"></div>
 <div class="chat-area">
-    <div class="chat-header" id="chatHeader">Выберите диалог</div>
+    <div class="chat-header" id="chatHeader"></div>
     <div class="messages-container" id="messagesContainer"></div>
     <div class="input-area" id="inputArea" style="display: none;">
-        <input type="text" id="messageInput" placeholder="Введите сообщение...">
+        <input type="text" id="messageInput" placeholder="Write a message...">
         <button id="sendBtn">Отправить</button>
     </div>
 </div>
+
+<!-- Правая панель профиля -->
+<div id="profilePanel" class="profile-panel">
+    <div class="profile-header">
+        <span>Профиль</span>
+        <button id="closeProfileBtn" class="close-btn">&times;</button>
+    </div>
+    <div class="profile-content">
+        <div class="profile-username">
+            <strong>Username:</strong> <span id="profileUsername">{{.}}</span>
+        </div>
+        <button id="logoutFromProfile" class="profile-logout-btn">Выйти</button>
+    </div>
+</div>
+<div id="overlay" class="overlay"></div>
 </body>
 </html>

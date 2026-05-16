@@ -110,9 +110,8 @@ function sendMessage() {
     const text = input.value.trim();
     if (!text) return;
     ws.send(JSON.stringify({ to: currentChat, text: text }));
-    // Оптимистичное обновление – сразу добавляем своё сообщение
-    appendMessage(currentUser, text, "sent");
-    // Обновляем список диалогов, чтобы поднять этот чат наверх
+    // Не добавляем сообщение сами, ждём подтверждения от сервера
+    // Но можно сразу обновить список диалогов (чтобы поднять чат наверх)
     loadDialogs();
     input.value = "";
 }
